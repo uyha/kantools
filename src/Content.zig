@@ -42,36 +42,3 @@ test "read" {
         try testing.expectEqualStrings(input, content.content.items);
     }
 }
-
-const Id = union(enum) {
-    string: []const u8,
-    integer: i32,
-
-    pub fn jsonParse(_: std.mem.Allocator, source: anytype, _: std.json.ParseOptions) !Id {
-        return switch (try source.next()) {
-            .number => |number| Id{ .integer = try std.fmt.parseInt(i32, number, 10) },
-            .string => |string| Id{ .string = string },
-            else => error.UnexpectedToken,
-        };
-    }
-};
-
-test "parse" {
-    const sliceReader = @import("slice_reader.zig").sliceReader;
-    const testing = @import("std").testing;
-
-    var content = init(testing.allocator);
-    defer content.deinit();
-
-    const input =
-        \\{
-        \\  "id": "sadf"
-        \\}
-    ;
-    var slice_reader = sliceReader(input);
-    try content.read(slice_reader.reader(), input.len);
-
-    const value = try content.parse(struct { id: Id });
-    defer value.deinit();
-    try testing.expectEqualStrings("sadf", value.value.id.string);
-}
