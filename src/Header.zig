@@ -75,6 +75,10 @@ pub fn write(self: *const Self, writer: anytype) @TypeOf(writer).Error!void {
     try writer.writeAll("\r\n");
 }
 
+pub fn format(value: *const Self, comptime _: []const u8, _: std.fmt.FormatOptions, writer: anytype) !void {
+    try std.fmt.format(writer, "Header{{ .content_length = {}, .content_type = {any} }}", .{ value.content_length, value.content_type });
+}
+
 test "Valid headers" {
     const sliceReader = @import("slice_reader.zig").sliceReader;
     const testing = @import("std").testing;
