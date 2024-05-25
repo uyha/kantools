@@ -19,7 +19,7 @@ pub fn deinit(self: Self) void {
     }
 }
 
-pub fn parse(reader: anytype, allocator: std.mem.Allocator) !Self {
+pub fn read(reader: anytype, allocator: std.mem.Allocator) !Self {
     var result = Self{ .content_length = undefined };
     errdefer result.deinit();
 
@@ -95,7 +95,7 @@ test "Valid headers" {
             var slice_reader = sliceReader(input);
             const reader = slice_reader.reader();
 
-            const result = try parse(reader, testing.allocator);
+            const result = try read(reader, testing.allocator);
             try testing.expectEqual(10, result.content_length);
             try testing.expectEqual(null, result.content_type);
         }
@@ -117,7 +117,7 @@ test "Valid headers" {
             var slice_reader = sliceReader(input);
             const reader = slice_reader.reader();
 
-            const result = try parse(reader, testing.allocator);
+            const result = try read(reader, testing.allocator);
             defer result.deinit();
             try testing.expectEqual(10, result.content_length);
             try testing.expectEqualStrings("application/vscode-jsonrpc; charset=utf-8", result.content_type.?);
@@ -134,7 +134,7 @@ test "Invalid headers" {
         var slice_reader = sliceReader(input);
         const reader = slice_reader.reader();
 
-        const result = parse(reader, testing.allocator);
+        const result = read(reader, testing.allocator);
         try testing.expectError(Error.IncompleteMessage, result);
     }
     {
@@ -142,7 +142,7 @@ test "Invalid headers" {
         var slice_reader = sliceReader(input);
         const reader = slice_reader.reader();
 
-        const result = parse(reader, testing.allocator);
+        const result = read(reader, testing.allocator);
         try testing.expectError(Error.IncompleteMessage, result);
     }
     {
@@ -150,7 +150,7 @@ test "Invalid headers" {
         var slice_reader = sliceReader(input);
         const reader = slice_reader.reader();
 
-        const result = parse(reader, testing.allocator);
+        const result = read(reader, testing.allocator);
         try testing.expectError(error.InvalidCharacter, result);
     }
     {
@@ -158,7 +158,7 @@ test "Invalid headers" {
         var slice_reader = sliceReader(input);
         const reader = slice_reader.reader();
 
-        const result = parse(reader, testing.allocator);
+        const result = read(reader, testing.allocator);
         try testing.expectError(Error.UnknownHeader, result);
     }
 }
