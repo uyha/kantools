@@ -5,23 +5,19 @@ allocator: std.mem.Allocator,
 
 const Self = @This();
 
-pub fn init(allocator: std.mem.Allocator) Self {
-    return .{
-        .content = std.ArrayList(u8).init(allocator),
-        .allocator = allocator,
-    };
-}
-
-pub fn deinit(self: *Self) void {
+pub fn deinit(self: Self) void {
     self.content.deinit();
 }
 
-pub fn read(self: *Self, reader: anytype, length: usize) !void {
+pub fn read(reader: anytype, length: usize, allocator: std.mem.Allocator) !Self {
     var bytes_read: usize = 0;
-    try self.content.resize(length);
+    var result = Self{ .content = std.ArrayList(u8).init(allocator), .allocator = allocator };
+    try result.content.resize(length);
     while (bytes_read != length) {
-        bytes_read += try reader.read(self.content.items[bytes_read..length]);
+        bytes_read += try reader.read(result.content.items[bytes_read..length]);
     }
+
+    return result;
 }
 
 pub fn parse(self: *const Self, comptime T: type) !std.json.Parsed(T) {
@@ -32,12 +28,10 @@ test "read" {
     const sliceReader = @import("slice_reader.zig").sliceReader;
     const testing = @import("std").testing;
 
-    var content = init(testing.allocator);
-    defer content.deinit();
-
     for ([_][]const u8{ "{}", "{\"name\":\"World\"}" }) |input| {
         var slice_reader = sliceReader(input);
-        try content.read(slice_reader.reader(), input.len);
+        const content = try read(slice_reader.reader(), input.len, testing.allocator);
+        defer content.deinit();
 
         try testing.expectEqualStrings(input, content.content.items);
     }
