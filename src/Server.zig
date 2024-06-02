@@ -35,8 +35,37 @@ fn routeRequest(comptime method: HandledRequestMethod, request: types.Message.Re
 }
 
 fn handleIntialize(params: types.InitializeParams) types.InitializeResult {
-    _ = params;
-    return types.InitializeResult{ .capabilities = .{}, .serverInfo = .{ .name = "kantools", .version = "0.1" } };
+    var utf8 = false;
+    var utf16 = false;
+    var utf32 = false;
+
+    if (params.capabilities.general) |general| {
+        if (general.positionEncodings) |position_encodings| {
+            for (position_encodings) |encoding| {
+                switch (encoding) {
+                    .@"utf-8" => utf8 = true,
+                    .@"utf-16" => utf16 = true,
+                    .@"utf-32" => utf32 = true,
+                    .custom_value => {},
+                }
+            }
+        }
+    }
+
+    const position_encoding: types.PositionEncodingKind = if (utf8) .@"utf-8" else if (utf32) .@"utf-32" else .@"utf-16";
+
+    return types.InitializeResult{
+        .capabilities = .{
+            .positionEncoding = position_encoding,
+            .textDocumentSync = .{
+                .TextDocumentSyncOptions = .{
+                    .openClose = true,
+                    .change = .Incremental,
+                },
+            },
+        },
+        .serverInfo = .{ .name = "kantools", .version = "0.1" },
+    };
 }
 
 fn responseResult(@"?id": ?types.Message.ID, result: anytype, writer: anytype) !void {
@@ -61,7 +90,7 @@ fn responseResult(@"?id": ?types.Message.ID, result: anytype, writer: anytype) !
             if (@"?result") |response| {
                 std.json.stringify(response, .{}, writer);
             } else {
-                writer.writeAll(null);
+                writer.writeAll("null");
             }
         },
         .Struct => {
